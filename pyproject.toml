@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "eQuant"
+version = "0.1.0"
+description = "Unified quantitative toolkit — umbrella package for eTTR, eClassic, eFactorCraft, eBacktestCraft, eAlpha101"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+dependencies = [
+    "eTTR>=0.1.0",
+    "eClassic>=0.1.0",
+    "eFactorCraft>=0.1.0",
+    "eBacktestCraft>=0.1.0",
+    "eAlpha101>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["equant*"]
