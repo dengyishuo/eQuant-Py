@@ -4,7 +4,7 @@ Shared scaffolding for all add_alphaXXX functions.
 Every public function follows this contract:
 
     def add_alphaXXX(
-        mkt_data: pd.DataFrame,
+        df: pd.DataFrame,
         close_col: str = "close",
         ...
         append: bool = True,
@@ -12,7 +12,7 @@ Every public function follows this contract:
 
 Input
 -----
-mkt_data : pd.DataFrame
+df : pd.DataFrame
     Long-format panel with at minimum columns:
       date (datetime-like), code (str), name (str)
     plus whatever price/volume/fundamental columns the alpha needs.
@@ -34,7 +34,7 @@ IDENTITY_COLS = ["date", "code", "name"]
 def _validate(df: pd.DataFrame, required: list[str]) -> None:
     missing = [c for c in required if c not in df.columns]
     if missing:
-        raise ValueError(f"mkt_data is missing required columns: {missing}")
+        raise ValueError(f"df is missing required columns: {missing}")
 
 
 def _sort(df: pd.DataFrame) -> pd.DataFrame:

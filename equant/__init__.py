@@ -23,6 +23,7 @@ __version__ = _ver("eQuant")
 # Lazy imports — only load sub-packages when accessed
 def __getattr__(name: str):
     _map = {
+        "utils":          "equant.utils",
         "ettr":           "ettr",
         "eclassic":       "eclassic",
         "efactorcraft":   "efactorcraft",
