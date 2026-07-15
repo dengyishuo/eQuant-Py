@@ -12,7 +12,7 @@ from .utils import (
 
 
 def add_alpha041(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     high_col: str = "high",
     low_col: str = "low",
     vwap_col: str = "vwap",
@@ -23,16 +23,16 @@ def add_alpha041(
 
     Required columns: date, code, name, ``high_col``, ``low_col``, ``vwap_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", high_col, low_col, vwap_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", high_col, low_col, vwap_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     df["alpha041"] = (df[high_col] * df[low_col]).pow(0.5) - df[vwap_col]
     return _finish(df, idx, "alpha041", append, [])
 
 
 def add_alpha042(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     vwap_col: str = "vwap",
     close_col: str = "close",
     append: bool = True,
@@ -42,9 +42,9 @@ def add_alpha042(
 
     Required columns: date, code, name, ``vwap_col``, ``close_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", vwap_col, close_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", vwap_col, close_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     df["_in42a"] = df[vwap_col] - df[close_col]
     df["_in42b"] = df[vwap_col] + df[close_col]
@@ -55,7 +55,7 @@ def add_alpha042(
 
 
 def add_alpha043(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     close_col: str = "close",
     volume_col: str = "volume",
     append: bool = True,
@@ -65,9 +65,9 @@ def add_alpha043(
 
     Required columns: date, code, name, ``close_col``, ``volume_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", close_col, volume_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", close_col, volume_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     def _per_stock(g):
         adv20 = adv(g[volume_col], 20)
@@ -85,7 +85,7 @@ def add_alpha043(
 
 
 def add_alpha044(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     high_col: str = "high",
     volume_col: str = "volume",
     append: bool = True,
@@ -95,9 +95,9 @@ def add_alpha044(
 
     Required columns: date, code, name, ``high_col``, ``volume_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", high_col, volume_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", high_col, volume_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     df["_rv44"] = df.groupby("date")[volume_col].transform(cs_rank)
 
@@ -110,7 +110,7 @@ def add_alpha044(
 
 
 def add_alpha045(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     close_col: str = "close",
     volume_col: str = "volume",
     append: bool = True,
@@ -122,9 +122,9 @@ def add_alpha045(
 
     Required columns: date, code, name, ``close_col``, ``volume_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", close_col, volume_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", close_col, volume_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     def _per_stock(g):
         delayed5 = delay(g[close_col], 5)
@@ -152,7 +152,7 @@ def add_alpha045(
 
 
 def add_alpha046(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     close_col: str = "close",
     append: bool = True,
 ) -> pd.DataFrame:
@@ -165,9 +165,9 @@ def add_alpha046(
 
     Required columns: date, code, name, ``close_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", close_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", close_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     def _per_stock(g):
         c = g[close_col]
@@ -187,7 +187,7 @@ def add_alpha046(
 
 
 def add_alpha047(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     close_col: str = "close",
     high_col: str = "high",
     volume_col: str = "volume",
@@ -204,9 +204,9 @@ def add_alpha047(
     Required columns: date, code, name, ``close_col``, ``high_col``,
     ``volume_col``, ``vwap_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", close_col, high_col, volume_col, vwap_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", close_col, high_col, volume_col, vwap_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     def _per_stock(g):
         a20 = adv(g[volume_col], 20)
@@ -235,7 +235,7 @@ def add_alpha047(
 
 
 def add_alpha048(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     neut_close_ret_col: str = "neut_close_ret",
     neut_vwap_ret_col: str = "neut_vwap_ret",
     append: bool = True,
@@ -252,16 +252,16 @@ def add_alpha048(
     Required columns: date, code, name, ``neut_close_ret_col``,
     ``neut_vwap_ret_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", neut_close_ret_col, neut_vwap_ret_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", neut_close_ret_col, neut_vwap_ret_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     df["alpha048"] = df[neut_close_ret_col] - df[neut_vwap_ret_col]
     return _finish(df, idx, "alpha048", append, [])
 
 
 def add_alpha049(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     close_col: str = "close",
     append: bool = True,
 ) -> pd.DataFrame:
@@ -273,9 +273,9 @@ def add_alpha049(
 
     Required columns: date, code, name, ``close_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", close_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", close_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     def _per_stock(g):
         c = g[close_col]
@@ -293,7 +293,7 @@ def add_alpha049(
 
 
 def add_alpha050(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     volume_col: str = "volume",
     vwap_col: str = "vwap",
     append: bool = True,
@@ -303,9 +303,9 @@ def add_alpha050(
 
     Required columns: date, code, name, ``volume_col``, ``vwap_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", volume_col, vwap_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", volume_col, vwap_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     df["_rv50"] = df.groupby("date")[volume_col].transform(cs_rank)
     df["_rvwap50"] = df.groupby("date")[vwap_col].transform(cs_rank)
@@ -337,7 +337,7 @@ def add_alpha050(
 
 
 def add_alpha051(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     close_col: str = "close",
     append: bool = True,
 ) -> pd.DataFrame:
@@ -349,9 +349,9 @@ def add_alpha051(
 
     Required columns: date, code, name, ``close_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", close_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", close_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     def _per_stock(g):
         c = g[close_col]
@@ -369,7 +369,7 @@ def add_alpha051(
 
 
 def add_alpha052(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     low_col: str = "low",
     returns_col: str = "returns",
     volume_col: str = "volume",
@@ -384,9 +384,9 @@ def add_alpha052(
     Required columns: date, code, name, ``low_col``, ``returns_col``,
     ``volume_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", low_col, returns_col, volume_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", low_col, returns_col, volume_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     def _per_stock(g):
         min_low5 = ts_min(g[low_col], 5)
@@ -409,7 +409,7 @@ def add_alpha052(
 
 
 def add_alpha053(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     high_col: str = "high",
     low_col: str = "low",
     close_col: str = "close",
@@ -423,9 +423,9 @@ def add_alpha053(
     Required columns: date, code, name, ``high_col``, ``low_col``,
     ``close_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", high_col, low_col, close_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", high_col, low_col, close_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     eps = 1e-10
 
@@ -444,7 +444,7 @@ def add_alpha053(
 
 
 def add_alpha054(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     low_col: str = "low",
     close_col: str = "close",
     open_col: str = "open",
@@ -459,9 +459,9 @@ def add_alpha054(
     Required columns: date, code, name, ``low_col``, ``close_col``,
     ``open_col``, ``high_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", low_col, close_col, open_col, high_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", low_col, close_col, open_col, high_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     numerator = (df[low_col] - df[close_col]) * (df[open_col] ** 5)
     denom = (df[close_col] - df[high_col]) * (df[close_col] ** 5)
@@ -471,7 +471,7 @@ def add_alpha054(
 
 
 def add_alpha055(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     close_col: str = "close",
     low_col: str = "low",
     high_col: str = "high",
@@ -487,9 +487,9 @@ def add_alpha055(
     Required columns: date, code, name, ``close_col``, ``low_col``,
     ``high_col``, ``volume_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", close_col, low_col, high_col, volume_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", close_col, low_col, high_col, volume_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     def _per_stock(g):
         mn12 = ts_min(g[low_col], 12)
@@ -516,7 +516,7 @@ def add_alpha055(
 
 
 def add_alpha056(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     returns_col: str = "returns",
     cap_col: str = "cap",
     append: bool = True,
@@ -528,9 +528,9 @@ def add_alpha056(
 
     Required columns: date, code, name, ``returns_col``, ``cap_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", returns_col, cap_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", returns_col, cap_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     df["_sum_ret56"] = (
         df.groupby("code")[returns_col]
@@ -547,7 +547,7 @@ def add_alpha056(
 
 
 def add_alpha057(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     close_col: str = "close",
     vwap_col: str = "vwap",
     append: bool = True,
@@ -557,9 +557,9 @@ def add_alpha057(
 
     Required columns: date, code, name, ``close_col``, ``vwap_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", close_col, vwap_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", close_col, vwap_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     df["_argmax57"] = (
         df.groupby("code")[close_col]
@@ -575,7 +575,7 @@ def add_alpha057(
 
 
 def add_alpha058(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     neut_vwap_col: str = "neut_vwap",
     volume_col: str = "volume",
     append: bool = True,
@@ -589,9 +589,9 @@ def add_alpha058(
 
     Required columns: date, code, name, ``neut_vwap_col``, ``volume_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", neut_vwap_col, volume_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", neut_vwap_col, volume_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     def _per_stock(g):
         corr4 = correlation(g[neut_vwap_col], g[volume_col], 4)
@@ -607,7 +607,7 @@ def add_alpha058(
 
 
 def add_alpha059(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     neut_vwap2_col: str = "neut_vwap2",
     volume_col: str = "volume",
     append: bool = True,
@@ -624,9 +624,9 @@ def add_alpha059(
 
     Required columns: date, code, name, ``neut_vwap2_col``, ``volume_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", neut_vwap2_col, volume_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", neut_vwap2_col, volume_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     def _per_stock(g):
         corr4 = correlation(g[neut_vwap2_col], g[volume_col], 4)
@@ -642,7 +642,7 @@ def add_alpha059(
 
 
 def add_alpha060(
-    mkt_data: pd.DataFrame,
+    df: pd.DataFrame,
     close_col: str = "close",
     low_col: str = "low",
     high_col: str = "high",
@@ -657,9 +657,9 @@ def add_alpha060(
     Required columns: date, code, name, ``close_col``, ``low_col``,
     ``high_col``, ``volume_col``.
     """
-    _validate(mkt_data, ["date", "code", "name", close_col, low_col, high_col, volume_col])
-    df = _sort(mkt_data).copy()
-    idx = mkt_data.index
+    _validate(df, ["date", "code", "name", close_col, low_col, high_col, volume_col])
+    df = _sort(df).copy()
+    idx = df.index
 
     hl = (df[high_col] - df[low_col]).replace(0, np.nan)
     df["_in60"] = ((df[close_col] - df[low_col]) - (df[high_col] - df[close_col])) / hl * df[volume_col]
