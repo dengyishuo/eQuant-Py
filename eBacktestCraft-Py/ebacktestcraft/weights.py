@@ -1,4 +1,4 @@
-"""Weight schemes — equal_weight / fixed_weight / norm_weight / weight."""
+"""Weight schemes — equal_weight / fixed_weight / norm_weight / opt_weight / weight."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+from scipy.optimize import minimize
 
 from equant.utils.panel import validate_panel
 
@@ -201,6 +202,187 @@ def norm_weight(
     return result
 
 
+def opt_weight(
+    df: pd.DataFrame,
+    signal_col: str,
+    return_col: str,
+    opt_type: str = "min_var",
+    window: int = 60,
+    alpha: float = 0.05,
+    rf: float = 0.0,
+    benchmark_col: Optional[str] = None,
+    annual_factor: int = 252,
+    weight_name: Optional[str] = None,
+    fallback: str = "equal",
+) -> pd.DataFrame:
+    """Optimization-based portfolio weights.
+
+    For each trading date, fits weights over a rolling ``window`` of past
+    returns to optimise the chosen objective.
+
+    Parameters
+    ----------
+    signal_col : str
+        Column where value == 1 marks the investable universe each day.
+    return_col : str
+        Column of per-asset period returns (already computed).
+    opt_type : str
+        One of ``"min_var"``, ``"min_es"``, ``"min_mdd"``,
+        ``"max_calmar"`` (alias ``"max_kama"``),
+        ``"max_treynor"`` (alias ``"max_terino"``).
+    window : int
+        Rolling lookback periods used to estimate the return distribution.
+    alpha : float
+        Tail probability for VaR / ES (default 0.05 → 95 % confidence).
+    rf : float
+        Annual risk-free rate used in Treynor ratio (default 0).
+    benchmark_col : str, optional
+        Column of benchmark returns required for ``max_treynor``.
+    annual_factor : int
+        Periods per year for annualisation (252 daily, 52 weekly, 12 monthly).
+    weight_name : str, optional
+        Output column name. Auto-generated if None.
+    fallback : str
+        Weight scheme when optimisation fails or history is too short:
+        ``"equal"`` (default) assigns 1/n, ``"zero"`` assigns 0.
+    """
+    _valid = {"min_var", "min_es", "min_mdd", "max_calmar", "max_kama",
+              "max_treynor", "max_terino"}
+    if opt_type not in _valid:
+        raise ValueError(f"opt_type must be one of {sorted(_valid)}")
+    # normalise aliases
+    if opt_type == "max_kama":
+        opt_type = "max_calmar"
+    if opt_type == "max_terino":
+        opt_type = "max_treynor"
+    if opt_type == "max_treynor" and benchmark_col is None:
+        raise ValueError("max_treynor requires benchmark_col")
+
+    validate_panel(df)
+    for c in [signal_col, return_col]:
+        if c not in df.columns:
+            raise ValueError(f"Column not found: {c}")
+    if benchmark_col and benchmark_col not in df.columns:
+        raise ValueError(f"Benchmark column not found: {benchmark_col}")
+
+    col = weight_name or f"weight_{opt_type}_{signal_col}"
+    result = df.copy().sort_values(["date", "code"]).reset_index(drop=True)
+    result[col] = 0.0
+    dates = sorted(result["date"].unique())
+
+    for i, dt in enumerate(dates):
+        day_idx = result.index[result["date"] == dt]
+        sel_mask = result.loc[day_idx, signal_col] == 1
+        sel_idx = day_idx[sel_mask]
+        if len(sel_idx) == 0:
+            continue
+        codes = result.loc[sel_idx, "code"].values
+
+        # build (window × n_assets) return matrix from past window periods
+        past_dates = dates[max(0, i - window): i]
+        if len(past_dates) < 5:
+            _fallback_fill(result, col, sel_idx, fallback)
+            continue
+
+        past = result[result["date"].isin(past_dates) & result["code"].isin(codes)]
+        R = (past.pivot(index="date", columns="code", values=return_col)
+               .reindex(columns=codes)
+               .dropna(axis=0))
+
+        if R.shape[0] < 5 or R.shape[1] < 1:
+            _fallback_fill(result, col, sel_idx, fallback)
+            continue
+
+        R_arr = R.values.astype(float)
+        n = R_arr.shape[1]
+        w0 = np.ones(n) / n
+        bounds = [(0, 1)] * n
+        cons = {"type": "eq", "fun": lambda w: w.sum() - 1}
+
+        bm = None
+        if benchmark_col:
+            bm_past = result[result["date"].isin(past_dates)].groupby("date")[benchmark_col].first()
+            bm = bm_past.reindex(R.index).values.astype(float)
+
+        obj = _make_objective(opt_type, R_arr, alpha, rf, annual_factor, bm)
+        try:
+            res = minimize(obj, w0, method="SLSQP", bounds=bounds, constraints=cons,
+                           options={"ftol": 1e-9, "maxiter": 500})
+            w_opt = res.x if res.success else None
+        except Exception:
+            w_opt = None
+
+        if w_opt is None or np.any(np.isnan(w_opt)):
+            _fallback_fill(result, col, sel_idx, fallback)
+        else:
+            w_opt = np.clip(w_opt, 0, 1)
+            w_opt /= w_opt.sum()
+            for j, idx in enumerate(sel_idx):
+                code = result.loc[idx, "code"]
+                pos = np.where(codes == code)[0]
+                result.loc[idx, col] = w_opt[pos[0]] if len(pos) else 0.0
+
+    _diag_weight(result, col, label=opt_type)
+    return result
+
+
+# ── objective factories ────────────────────────────────────────────────────────
+
+def _make_objective(opt_type, R, alpha, rf, annual_factor, bm):
+    """Return a scalar minimisation objective f(w)."""
+    if opt_type == "min_var":
+        cov = np.cov(R.T)
+        return lambda w: w @ cov @ w
+
+    if opt_type == "min_es":
+        def _es(w):
+            pr = R @ w
+            cutoff = np.percentile(pr, alpha * 100)
+            tail = pr[pr <= cutoff]
+            return -tail.mean() if len(tail) else 0.0
+        return _es
+
+    if opt_type == "min_mdd":
+        def _mdd(w):
+            pr = R @ w
+            nav = np.cumprod(1 + pr)
+            peak = np.maximum.accumulate(nav)
+            return ((peak - nav) / np.where(peak == 0, 1, peak)).max()
+        return _mdd
+
+    if opt_type == "max_calmar":
+        def _neg_calmar(w):
+            pr = R @ w
+            ann_ret = np.mean(pr) * annual_factor
+            nav = np.cumprod(1 + pr)
+            peak = np.maximum.accumulate(nav)
+            mdd = ((peak - nav) / np.where(peak == 0, 1, peak)).max()
+            return -(ann_ret / mdd) if mdd > 1e-10 else 1e10
+        return _neg_calmar
+
+    if opt_type == "max_treynor":
+        rf_period = rf / annual_factor
+        def _neg_treynor(w):
+            pr = R @ w
+            excess = pr - rf_period
+            bm_excess = bm - rf_period
+            var_bm = np.var(bm_excess, ddof=1)
+            if var_bm < 1e-15:
+                return 1e10
+            beta = np.cov(excess, bm_excess, ddof=1)[0, 1] / var_bm
+            if abs(beta) < 1e-10:
+                return 1e10
+            return -(np.mean(excess) * annual_factor / beta)
+        return _neg_treynor
+
+    raise ValueError(f"Unknown opt_type: {opt_type}")
+
+
+def _fallback_fill(result, col, sel_idx, fallback):
+    n = len(sel_idx)
+    result.loc[sel_idx, col] = 1.0 / n if fallback == "equal" and n > 0 else 0.0
+
+
 def weight(
     df: pd.DataFrame,
     weight_type: str,
@@ -222,15 +404,27 @@ def weight(
     >>> weight(df, "norm",  weight_col="mom_20", norm_method="softmax")
     """
     _dispatch = {
-        "equal": equal_weight,
-        "fixed": fixed_weight,
-        "norm":  norm_weight,
+        "equal":       equal_weight,
+        "fixed":       fixed_weight,
+        "norm":        norm_weight,
+        "min_var":     opt_weight,
+        "min_es":      opt_weight,
+        "min_mdd":     opt_weight,
+        "max_calmar":  opt_weight,
+        "max_kama":    opt_weight,
+        "max_treynor": opt_weight,
+        "max_terino":  opt_weight,
     }
     if weight_type not in _dispatch:
         raise ValueError(
             f"Unknown weight_type: {weight_type!r}. "
             f"Must be one of: {', '.join(_dispatch)}"
         )
+    # opt_weight types need opt_type forwarded
+    _opt_types = {"min_var", "min_es", "min_mdd",
+                  "max_calmar", "max_kama", "max_treynor", "max_terino"}
+    if weight_type in _opt_types:
+        return opt_weight(df, opt_type=weight_type, **kwargs)
     return _dispatch[weight_type](df, **kwargs)
 
 
