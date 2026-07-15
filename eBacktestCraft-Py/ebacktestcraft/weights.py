@@ -202,6 +202,164 @@ def norm_weight(
     return result
 
 
+def rank_weight(
+    df: pd.DataFrame,
+    signal_col: str,
+    factor_col: str,
+    ascending: bool = False,
+    weight_name: Optional[str] = None,
+) -> pd.DataFrame:
+    """Rank-proportional weights: w_i = (n+1-rank_i) / sum(1..n).
+
+    Higher factor value → higher rank → higher weight when ascending=False.
+
+    Parameters
+    ----------
+    factor_col : str
+        Column used to rank stocks within each day's selected universe.
+    ascending : bool
+        If True, lower factor value gets higher weight. Default False.
+    """
+    validate_panel(df)
+    for c in [signal_col, factor_col]:
+        if c not in df.columns:
+            raise ValueError(f"Column not found: {c}")
+
+    col = weight_name or f"weight_rank_{factor_col}_{signal_col}"
+    result = df.copy()
+    result[col] = 0.0
+
+    for dt, grp in result.groupby("date"):
+        sel = grp[grp[signal_col] == 1]
+        if len(sel) == 0:
+            continue
+        n = len(sel)
+        ranks = sel[factor_col].rank(ascending=ascending, method="average")
+        # invert so rank=1 → highest weight
+        inv = (n + 1) - ranks
+        w = inv / inv.sum()
+        result.loc[w.index, col] = w.values
+
+    _diag_weight(result, col, label="rank")
+    return result
+
+
+def inv_vol_weight(
+    df: pd.DataFrame,
+    signal_col: str,
+    return_col: str,
+    window: int = 60,
+    annual_factor: int = 252,
+    weight_name: Optional[str] = None,
+) -> pd.DataFrame:
+    """Inverse-volatility weights: w_i = (1/σ_i) / Σ(1/σ_j).
+
+    Lower rolling volatility → higher weight.
+
+    Parameters
+    ----------
+    return_col : str
+        Per-asset return column used to compute rolling volatility.
+    window : int
+        Rolling lookback for volatility estimation. Default 60.
+    annual_factor : int
+        Annualisation factor (252 / 52 / 12). Default 252.
+    """
+    validate_panel(df)
+    for c in [signal_col, return_col]:
+        if c not in df.columns:
+            raise ValueError(f"Column not found: {c}")
+
+    col = weight_name or f"weight_inv_vol_{signal_col}"
+    result = df.copy().sort_values(["code", "date"]).reset_index(drop=True)
+
+    # rolling annualised vol per stock (time-series, per code)
+    result["_vol"] = (
+        result.groupby("code")[return_col]
+        .transform(lambda x: x.rolling(window, min_periods=5).std() * np.sqrt(annual_factor))
+    )
+    result[col] = 0.0
+    result = result.sort_values(["date", "code"]).reset_index(drop=True)
+
+    for dt, grp in result.groupby("date"):
+        sel = grp[(grp[signal_col] == 1) & grp["_vol"].notna() & (grp["_vol"] > 0)]
+        if len(sel) == 0:
+            continue
+        inv_v = 1.0 / sel["_vol"]
+        w = inv_v / inv_v.sum()
+        result.loc[w.index, col] = w.values
+
+    result = result.drop(columns=["_vol"])
+    _diag_weight(result, col, label="inv_vol")
+    return result
+
+
+def target_vol_weight(
+    df: pd.DataFrame,
+    weight_col: str,
+    return_col: str,
+    target_vol: float = 0.10,
+    window: int = 60,
+    annual_factor: int = 252,
+    max_leverage: float = 2.0,
+    weight_name: Optional[str] = None,
+) -> pd.DataFrame:
+    """Scale an existing weight column so portfolio hits a target volatility.
+
+    leverage = target_vol / realized_vol, capped at max_leverage.
+    Weights are rescaled each day; sum may be < 1 when vol is high.
+
+    Parameters
+    ----------
+    weight_col : str
+        Existing weight column to rescale.
+    return_col : str
+        Per-asset return column used to compute realised portfolio vol.
+    target_vol : float
+        Annualised target volatility (e.g. 0.10 = 10 %). Default 0.10.
+    window : int
+        Rolling lookback for vol estimation. Default 60.
+    max_leverage : float
+        Cap on the leverage multiplier. Default 2.0.
+    """
+    validate_panel(df)
+    for c in [weight_col, return_col]:
+        if c not in df.columns:
+            raise ValueError(f"Column not found: {c}")
+
+    col = weight_name or f"weight_tvol_{weight_col}"
+    result = df.copy().sort_values(["date", "code"]).reset_index(drop=True)
+    dates = sorted(result["date"].unique())
+    result[col] = 0.0
+
+    for i, dt in enumerate(dates):
+        day_idx = result.index[result["date"] == dt]
+        w_today = result.loc[day_idx, weight_col].values
+
+        if i < window or w_today.sum() < 1e-10:
+            result.loc[day_idx, col] = w_today
+            continue
+
+        past_dates = dates[i - window: i]
+        # build portfolio return series using yesterday's weights
+        past = result[result["date"].isin(past_dates)].pivot(
+            index="date", columns="code", values=return_col
+        ).fillna(0)
+        # align weights to past columns
+        codes_today = result.loc[day_idx, "code"].values
+        w_ser = pd.Series(w_today, index=codes_today)
+        w_aligned = w_ser.reindex(past.columns, fill_value=0).values
+        port_ret = past.values @ w_aligned
+        realized_vol = port_ret.std(ddof=1) * np.sqrt(annual_factor)
+
+        leverage = (target_vol / realized_vol) if realized_vol > 1e-10 else 1.0
+        leverage = min(leverage, max_leverage)
+        result.loc[day_idx, col] = w_today * leverage
+
+    _diag_weight(result, col, label=f"target_vol({target_vol:.0%})")
+    return result
+
+
 def opt_weight(
     df: pd.DataFrame,
     signal_col: str,
@@ -247,7 +405,8 @@ def opt_weight(
         ``"equal"`` (default) assigns 1/n, ``"zero"`` assigns 0.
     """
     _valid = {"min_var", "min_es", "min_mdd", "max_calmar", "max_kama",
-              "max_treynor", "max_terino"}
+              "max_treynor", "max_terino", "risk_parity", "min_variance",
+              "max_sharpe"}
     if opt_type not in _valid:
         raise ValueError(f"opt_type must be one of {sorted(_valid)}")
     # normalise aliases
@@ -375,6 +534,31 @@ def _make_objective(opt_type, R, alpha, rf, annual_factor, bm):
             return -(np.mean(excess) * annual_factor / beta)
         return _neg_treynor
 
+    if opt_type == "risk_parity":
+        cov = np.cov(R.T)
+        def _risk_parity(w):
+            port_var = w @ cov @ w
+            if port_var < 1e-20:
+                return 0.0
+            rc = w * (cov @ w) / np.sqrt(port_var)   # risk contributions
+            target = np.sqrt(port_var) / len(w)
+            return np.sum((rc - target) ** 2)
+        return _risk_parity
+
+    if opt_type == "min_variance":
+        cov = np.cov(R.T)
+        return lambda w: w @ cov @ w
+
+    if opt_type == "max_sharpe":
+        mu = R.mean(axis=0) * annual_factor
+        cov = np.cov(R.T)
+        rf_annual = rf
+        def _neg_sharpe(w):
+            ret = mu @ w - rf_annual
+            vol = np.sqrt(w @ cov @ w * annual_factor)
+            return -(ret / vol) if vol > 1e-10 else 1e10
+        return _neg_sharpe
+
     raise ValueError(f"Unknown opt_type: {opt_type}")
 
 
@@ -404,25 +588,33 @@ def weight(
     >>> weight(df, "norm",  weight_col="mom_20", norm_method="softmax")
     """
     _dispatch = {
-        "equal":       equal_weight,
-        "fixed":       fixed_weight,
-        "norm":        norm_weight,
-        "min_var":     opt_weight,
-        "min_es":      opt_weight,
-        "min_mdd":     opt_weight,
-        "max_calmar":  opt_weight,
-        "max_kama":    opt_weight,
-        "max_treynor": opt_weight,
-        "max_terino":  opt_weight,
+        # ── analytical ────────────────────────────────────────────
+        "equal":        equal_weight,
+        "fixed":        fixed_weight,
+        "norm":         norm_weight,
+        "rank":         rank_weight,
+        "inv_vol":      inv_vol_weight,
+        "target_vol":   target_vol_weight,
+        # ── optimisation-based ────────────────────────────────────
+        "min_var":      opt_weight,
+        "min_es":       opt_weight,
+        "min_mdd":      opt_weight,
+        "max_calmar":   opt_weight,
+        "max_kama":     opt_weight,
+        "max_treynor":  opt_weight,
+        "max_terino":   opt_weight,
+        "risk_parity":  opt_weight,
+        "min_variance": opt_weight,
+        "max_sharpe":   opt_weight,
     }
     if weight_type not in _dispatch:
         raise ValueError(
             f"Unknown weight_type: {weight_type!r}. "
-            f"Must be one of: {', '.join(_dispatch)}"
+            f"Must be one of: {', '.join(sorted(_dispatch))}"
         )
-    # opt_weight types need opt_type forwarded
-    _opt_types = {"min_var", "min_es", "min_mdd",
-                  "max_calmar", "max_kama", "max_treynor", "max_terino"}
+    _opt_types = {"min_var", "min_es", "min_mdd", "max_calmar", "max_kama",
+                  "max_treynor", "max_terino", "risk_parity", "min_variance",
+                  "max_sharpe"}
     if weight_type in _opt_types:
         return opt_weight(df, opt_type=weight_type, **kwargs)
     return _dispatch[weight_type](df, **kwargs)
