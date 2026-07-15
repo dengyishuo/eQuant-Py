@@ -49,3 +49,13 @@ from ettr import sma, ema, rsi
 PYTHONPATH=eTTR-Py:eClassic-Py:eAlpha101-Py:eFactorCraft-Py:eBacktestCraft-Py:. \
   python3 -m pytest eTTR-Py/tests eClassic-Py/tests eAlpha101-Py/tests eFactorCraft-Py/tests eBacktestCraft-Py/tests -v
 ```
+
+---
+
+## 联系我们
+
+| | |
+|---|---|
+| 🌐 公司官网 | [xquant.shop](https://xquant.shop) |
+| 📱 公司公众号 | xquant-shop |
+| 📱 个人公众号 | i锐角 |

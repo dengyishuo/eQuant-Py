@@ -3,11 +3,12 @@ eQuant: Unified quantitative research toolkit.
 
 Sub-packages
 ------------
-ettr          Technical trading rules and indicators
-eclassic      Classic quantitative indicators (momentum, RPS, RAM, ...)
-efactorcraft  Factor data acquisition and preprocessing
+ettr            Technical trading rules and indicators
+eclassic        Classic quantitative indicators (momentum, RPS, RAM, ...)
+efactorcraft    Factor data acquisition and preprocessing
 ebacktestcraft  Backtesting framework
-ealpha101     WorldQuant 101 alpha factors
+ealpha101       WorldQuant 101 alpha factors
+ecandlesticks   Japanese candlestick pattern detection (TA-Lib backed)
 """
 
 from importlib.metadata import version, PackageNotFoundError
@@ -29,6 +30,7 @@ def __getattr__(name: str):
         "efactorcraft":   "efactorcraft",
         "ebacktestcraft": "ebacktestcraft",
         "ealpha101":      "ealpha101",
+        "ecandlesticks":  "ecandlesticks",
     }
     if name in _map:
         import importlib
@@ -40,5 +42,6 @@ def __getattr__(name: str):
 
 def versions() -> dict:
     """Print version of each sub-package."""
-    pkgs = ["eTTR", "eClassic", "eFactorCraft", "eBacktestCraft", "eAlpha101", "eQuant"]
+    pkgs = ["eTTR", "eClassic", "eFactorCraft", "eBacktestCraft", "eAlpha101",
+            "eCandleSticks", "eQuant"]
     return {p: _ver(p) for p in pkgs}

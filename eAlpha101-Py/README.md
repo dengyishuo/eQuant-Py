@@ -309,3 +309,13 @@ Kakushadze, Z. (2016). *101 Formulaic Alphas*. Wilmott Magazine, 2016(84), 72–
 
 - **eAlpha101** (R package) — same 101 alphas with identical long-format API
 - **eClassic** (R package) — Fama-French 6-factor model functions (Size, Value, Profitability, Investment, Beta, Momentum)
+
+---
+
+## 联系我们
+
+| | |
+|---|---|
+| 🌐 公司官网 | [xquant.shop](https://xquant.shop) |
+| 📱 公司公众号 | xquant-shop |
+| 📱 个人公众号 | i锐角 |

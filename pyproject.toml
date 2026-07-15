@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "eQuant"
 version = "0.1.0"
-description = "Unified quantitative toolkit — umbrella package for eTTR, eClassic, eFactorCraft, eBacktestCraft, eAlpha101"
+description = "Unified quantitative toolkit — umbrella package for eTTR, eClassic, eFactorCraft, eBacktestCraft, eAlpha101, eCandleSticks"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
@@ -15,6 +15,7 @@ dependencies = [
     "eFactorCraft>=0.1.0",
     "eBacktestCraft>=0.1.0",
     "eAlpha101>=0.1.0",
+    "eCandleSticks>=0.1.0",
 ]
 
 [project.optional-dependencies]
