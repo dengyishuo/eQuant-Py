@@ -386,8 +386,7 @@ def opt_weight(
         Column of per-asset period returns (already computed).
     opt_type : str
         One of ``"min_var"``, ``"min_es"``, ``"min_mdd"``,
-        ``"max_calmar"`` (alias ``"max_kama"``),
-        ``"max_treynor"`` (alias ``"max_terino"``).
+        ``"max_calmar"``, ``"max_treynor"``.
     window : int
         Rolling lookback periods used to estimate the return distribution.
     alpha : float
@@ -404,16 +403,10 @@ def opt_weight(
         Weight scheme when optimisation fails or history is too short:
         ``"equal"`` (default) assigns 1/n, ``"zero"`` assigns 0.
     """
-    _valid = {"min_var", "min_es", "min_mdd", "max_calmar", "max_kama",
-              "max_treynor", "max_terino", "risk_parity", "min_variance",
-              "max_sharpe"}
+    _valid = {"min_var", "min_es", "min_mdd", "max_calmar",
+              "max_treynor", "risk_parity", "min_variance", "max_sharpe"}
     if opt_type not in _valid:
         raise ValueError(f"opt_type must be one of {sorted(_valid)}")
-    # normalise aliases
-    if opt_type == "max_kama":
-        opt_type = "max_calmar"
-    if opt_type == "max_terino":
-        opt_type = "max_treynor"
     if opt_type == "max_treynor" and benchmark_col is None:
         raise ValueError("max_treynor requires benchmark_col")
 
@@ -600,9 +593,7 @@ def weight(
         "min_es":       opt_weight,
         "min_mdd":      opt_weight,
         "max_calmar":   opt_weight,
-        "max_kama":     opt_weight,
         "max_treynor":  opt_weight,
-        "max_terino":   opt_weight,
         "risk_parity":  opt_weight,
         "min_variance": opt_weight,
         "max_sharpe":   opt_weight,
@@ -612,8 +603,8 @@ def weight(
             f"Unknown weight_type: {weight_type!r}. "
             f"Must be one of: {', '.join(sorted(_dispatch))}"
         )
-    _opt_types = {"min_var", "min_es", "min_mdd", "max_calmar", "max_kama",
-                  "max_treynor", "max_terino", "risk_parity", "min_variance",
+    _opt_types = {"min_var", "min_es", "min_mdd", "max_calmar",
+                  "max_treynor", "risk_parity", "min_variance",
                   "max_sharpe"}
     if weight_type in _opt_types:
         return opt_weight(df, opt_type=weight_type, **kwargs)
