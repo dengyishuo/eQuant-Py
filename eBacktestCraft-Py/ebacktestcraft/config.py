@@ -36,7 +36,7 @@ class BacktestConfig:
 
     # ── Component Stop Loss ──
     enable_component_stop_loss: bool = False
-    component_stop_loss_type: Literal["fixed", "trailing_fixed", "trailing_atr", "trailing_vol", "trailing_log"] = "fixed"
+    component_stop_loss_type: Literal["fixed", "trailing_fixed", "trailing_atr", "trailing_vol", "trailing_log", "stop_limit"] = "fixed"
     fixed_component_sl_ratio: float = 0.1
     trailing_fixed_component_sl_ratio: float = 0.1
     atr_n_component: int = 14
@@ -48,7 +48,7 @@ class BacktestConfig:
 
     # ── Portfolio Stop Loss ──
     enable_portfolio_stop_loss: bool = False
-    portfolio_stop_loss_type: Literal["fixed", "trailing_fixed", "trailing_atr", "trailing_vol", "trailing_log"] = "fixed"
+    portfolio_stop_loss_type: Literal["fixed", "trailing_fixed", "trailing_atr", "trailing_vol", "trailing_log", "stop_limit"] = "fixed"
     fixed_portfolio_sl_ratio: float = 0.1
     trailing_fixed_portfolio_sl_ratio: float = 0.1
     atr_n_portfolio: int = 14
@@ -60,7 +60,7 @@ class BacktestConfig:
 
     # ── Component Take Profit ──
     enable_component_take_profit: bool = False
-    component_take_profit_type: Literal["fixed", "trailing_fixed", "trailing_atr", "trailing_vol", "trailing_log"] = "fixed"
+    component_take_profit_type: Literal["fixed", "trailing_fixed", "trailing_atr", "trailing_vol", "trailing_log", "stop_limit"] = "fixed"
     fixed_component_tp_ratio: float = 0.1
     trailing_fixed_component_tp_ratio: float = 0.1
     atr_k_component_tp: float = 2.0
@@ -69,12 +69,29 @@ class BacktestConfig:
 
     # ── Portfolio Take Profit ──
     enable_portfolio_take_profit: bool = False
-    portfolio_take_profit_type: Literal["fixed", "trailing_fixed", "trailing_atr", "trailing_vol", "trailing_log"] = "fixed"
+    portfolio_take_profit_type: Literal["fixed", "trailing_fixed", "trailing_atr", "trailing_vol", "trailing_log", "stop_limit"] = "fixed"
     fixed_portfolio_tp_ratio: float = 0.1
     trailing_fixed_portfolio_tp_ratio: float = 0.1
     atr_k_portfolio_tp: float = 2.0
     vol_sigma_portfolio_tp: float = 2.0
     log_vol_sigma_portfolio_tp: float = 2.0
+
+    # ── Stop-Limit execution gap ─────────────────────────────────────────────
+    # For stop_limit SL: limit floor = trigger * (1 - gap).  Won't fill if
+    # open gaps below this floor (price skipped the limit level entirely).
+    # For stop_limit TP: limit ceiling = trigger * (1 + gap).  Won't fill if
+    # open gaps above this ceiling (already past the bracket window).
+    stop_limit_component_sl_gap: float = 0.005
+    stop_limit_component_tp_gap: float = 0.005
+    stop_limit_portfolio_sl_gap: float = 0.005
+    stop_limit_portfolio_tp_gap: float = 0.005
+
+    # ── OCO (One-Cancels-Other) bracket ──────────────────────────────────────
+    # When True, stop-loss and take-profit are treated as a linked pair:
+    # whichever fires first closes the position; the other is cancelled.
+    # Equivalent to enabling both SL and TP simultaneously.
+    enable_oco_component: bool = False
+    enable_oco_portfolio: bool = False
 
     # ── Rebalancing ──
     rebalance_mode: Literal["calendar", "weight_shift", "hybrid"] = "calendar"
