@@ -8,6 +8,7 @@ Usage::
     import ebacktestcraft as ebc
 
     cfg = ebc.Config(init_capital=100_000, rebalance_cycle="monthly")
+    df = ebc.add_indicator(df, "momentum", n=20)
     df = ebc.signal(df, factor_col="mom_20", method="quantile")
     df = ebc.equal_weight(df)
     result = ebc.run(df, config=cfg)
@@ -32,6 +33,7 @@ from ebacktestcraft.param_scan import (
 )
 from ebacktestcraft.signals import signal
 from ebacktestcraft.weights import equal_weight, fixed_weight, norm_weight
+from ebacktestcraft.indicator import add_indicator, list_indicators
 
 # ── Plotting (optional, requires matplotlib/seaborn) ──
 try:
@@ -76,6 +78,8 @@ __all__ = [
     "BacktestResult",
     "run",
     "signal",
+    "add_indicator",
+    "list_indicators",
     "equal_weight",
     "fixed_weight",
     "norm_weight",

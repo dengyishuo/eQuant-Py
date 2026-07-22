@@ -47,7 +47,7 @@ pip install -e eBacktestCraft-Py
 ## 快速开始
 
 ```python
-from ebacktestcraft import Config, run, signal, equal_weight, plot_all, performance_analysis
+from ebacktestcraft import Config, run, signal, equal_weight, add_indicator, plot_all, performance_analysis
 
 # 1. 配置回测
 config = Config(
@@ -58,24 +58,27 @@ config = Config(
     slippage=0.001,
 )
 
-# 2. 生成信号
-signals = signal(df, indicator_cols=["composite"], signal_type="quantile", top_n=10)
+# 2. 计算因子（统一路由）
+df = add_indicator(df, "momentum", n=20)
 
-# 3. 分配权重
+# 3. 生成信号
+signals = signal(df, indicator_cols=["mom_20"], signal_type="quantile", top_n=10)
+
+# 4. 分配权重
 weights = equal_weight(signals, signal_col="composite_signal")
 
-# 4. 运行回测
+# 5. 运行回测
 result = run(df, config, weight_col=weights.columns[-1])
 
-# 5. 查看绩效
+# 6. 查看绩效
 print(result.summary())
 # {'total_return': 0.15, 'annual_return': 0.15, 'sharpe_ratio': 1.2,
 #  'max_drawdown': -0.12, 'win_rate': 0.55, 'calmar_ratio': 1.25}
 
-# 6. 一键出图
+# 7. 一键出图
 plot_all(result, save_dir="charts/", show=True)
 
-# 7. 对比基准
+# 8. 对比基准
 from ebacktestcraft import buy_and_hold_benchmark, compare_benchmarks
 bm = buy_and_hold_benchmark(df, config)
 comparison = compare_benchmarks([result, bm], labels=["Strategy", "B&H"])
@@ -106,6 +109,41 @@ comparison = compare_benchmarks([result, bm], labels=["Strategy", "B&H"])
 | 止盈止损参数 | `profit_stop_*`, `loss_stop_*`, OCO 模式等 | — |
 | `rebalance_mode` | 调仓模式 | `"daily"` |
 | `rebalance_cycle` | 调仓周期 | `1` |
+
+### 统一指标路由
+
+`add_indicator(df, indicator, **kwargs) -> pd.DataFrame`
+
+一键计算任何因子/指标，自动路由到对应的子包：
+
+```python
+add_indicator(df, "rsi", close_col="close", n=14)              # →    ettr.rsi()
+add_indicator(df, "momentum", n=20)                             # → eclassic.momentum()
+add_indicator(df, "alpha001", close_col="close")                # → ealpha101.add_alpha001()
+add_indicator(df, "doji")                                       # → ecandlesticks.add_doji()
+add_indicator(df, "eClassic.volatility", close_col="close", n=20)  # 消歧义
+```
+
+`list_indicators(package=None) -> DataFrame`
+
+列出所有可用指标（220+ 个），可按包过滤：
+
+```python
+list_indicators()           # 全部 220+ 行 DataFrame
+list_indicators("ettr")     # 仅 eTTR 的 50+ 个指标
+list_indicators("eclassic") # 仅 eClassic 的 13 个因子
+```
+
+**路由表概览**：
+
+| 包 | 指标数 | 短名示例 | 实际调用 |
+|----|--------|---------|----------|
+| eTTR | 50+ | `rsi`, `sma`, `macd`, `atr`, ... | `ettr.rsi()` |
+| eClassic | 13 | `momentum`, `beta`, `size`, ... | `eclassic.momentum()` |
+| eAlpha101 | 101 | `alpha001`–`alpha101` 或 `001`–`101` | `ealpha101.add_alpha001()` |
+| eCandleSticks | 52 | `doji`, `hammer`, `engulfing`, ... | `ecandlesticks.add_doji()` |
+
+名称冲突用 `"包名.指标"` 消歧义：`"eClassic.sma"` / `"eTTR.sma"`。
 
 ### 信号生成
 
