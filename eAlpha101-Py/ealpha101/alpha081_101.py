@@ -37,7 +37,7 @@ def add_alpha081(
         c2 = correlation(g["_rvwap81"], g["_rvol81"], 5)
         return pd.DataFrame({"_c181": c1, "_c281": c2}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_c181"] = tmp["_c181"]
     df["_c281"] = tmp["_c281"]
     df["_rc181a"] = df.groupby("date")["_c181"].transform(cs_rank)
@@ -48,7 +48,7 @@ def add_alpha081(
         log_prod = np.log(prod_val.clip(lower=1e-10))
         return log_prod - g["_c281"]
 
-    df["_inner81"] = df.groupby("code", group_keys=False).apply(_per_stock2).reset_index(level=0, drop=True)
+    df["_inner81"] = df.groupby("code", group_keys=False).apply(_per_stock2, include_groups=False).reset_index(level=0, drop=True)
     df["alpha081"] = df.groupby("date")["_inner81"].transform(cs_rank)
     return _finish(df, idx, "alpha081", append, ["_rvwap81", "_rvol81", "_c181", "_c281", "_rc181a", "_rc181b", "_inner81"])
 
@@ -78,7 +78,7 @@ def add_alpha082(
         p2 = ts_rank(decay_linear(c, 6), 6)
         return pd.DataFrame({"_p182": p1, "_p282": p2}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_p182"] = tmp["_p182"]
     df["_p282"] = tmp["_p282"]
     df["_rp182"] = df.groupby("date")["_p182"].transform(cs_rank)
@@ -112,7 +112,7 @@ def add_alpha083(
         denom_ts = hl_ratio / (g[vwap_col] - g[close_col]).replace(0, np.nan)
         return pd.DataFrame({"_n83": num_ts, "_d83": denom_ts}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_n83"] = tmp["_n83"]
     df["_d83"] = tmp["_d83"]
     df["_rn83"] = df.groupby("date")["_n83"].transform(cs_rank)
@@ -143,7 +143,7 @@ def add_alpha084(
         return signedpower(base, exp_)
 
     df["alpha084"] = (
-        df.groupby("code", group_keys=False).apply(_per_stock)
+        df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
         .reset_index(level=0, drop=True)
     )
     return _finish(df, idx, "alpha084", append, [])
@@ -176,7 +176,7 @@ def add_alpha085(
         c2 = correlation(ts_rank(mid, 3), ts_rank(g[volume_col], 10), 7)
         return pd.DataFrame({"_c185": c1, "_c285": c2}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_c185"] = tmp["_c185"]
     df["_c285"] = tmp["_c285"]
     df["_rc185"] = df.groupby("date")["_c185"].transform(cs_rank)
@@ -210,7 +210,7 @@ def add_alpha086(
         ratio = (g[close_col] - mn) / (mx - mn).replace(0, np.nan)
         return pd.DataFrame({"_trc86": trc, "_ratio86": ratio}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_trc86"] = tmp["_trc86"]
     df["_ratio86"] = tmp["_ratio86"]
     df["_r186"] = df.groupby("date")["_ratio86"].transform(cs_rank)
@@ -247,7 +247,7 @@ def add_alpha087(
         p2 = ts_rank(decay_linear(ts_rank(c, 4), 14), 8)
         return pd.DataFrame({"_p187": p1, "_p287": p2}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_p187"] = tmp["_p187"]
     df["_p287"] = tmp["_p287"]
     df["_rp187"] = df.groupby("date")["_p187"].transform(cs_rank)
@@ -288,7 +288,7 @@ def add_alpha088(
         p2 = ts_rank(decay_linear(c, 6), 2)
         return pd.DataFrame({"_p188": p1, "_p288": p2}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_p188"] = tmp["_p188"]
     df["_p288"] = tmp["_p288"]
     df["_rp188"] = df.groupby("date")["_p188"].transform(cs_rank)
@@ -322,7 +322,7 @@ def add_alpha089(
         return p1 - p2
 
     df["alpha089"] = (
-        df.groupby("code", group_keys=False).apply(_per_stock)
+        df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
         .reset_index(level=0, drop=True)
     )
     return _finish(df, idx, "alpha089", append, [])
@@ -351,7 +351,7 @@ def add_alpha090(
         diff = g[close_col] - ts_max(g[close_col], 4)
         return pd.DataFrame({"_diff90": diff, "_c90": c}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_diff90"] = tmp["_diff90"]
     df["_c90"] = tmp["_c90"]
     df["_rd90"] = df.groupby("date")["_diff90"].transform(cs_rank)
@@ -386,7 +386,7 @@ def add_alpha091(
         p2 = decay_linear(correlation(g[vwap_col], a30, 4), 5)
         return pd.DataFrame({"_p191": p1, "_p291": p2}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_p191"] = tmp["_p191"]
     df["_p291"] = tmp["_p291"]
     df["_rp291"] = df.groupby("date")["_p291"].transform(cs_rank)
@@ -434,7 +434,7 @@ def add_alpha092(
         p2 = ts_rank(decay_linear(inner, 7), 6)
         return pd.DataFrame({"_p192": p1, "_p292": p2}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_p192"] = tmp["_p192"]
     df["_p292"] = tmp["_p292"]
     df["alpha092"] = np.minimum(df["_p192"].values, df["_p292"].values)
@@ -468,7 +468,7 @@ def add_alpha093(
         den = decay_linear(delta(price, 3), 6)
         return pd.DataFrame({"_n93": num, "_d93": den}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_n93"] = tmp["_n93"]
     df["_d93"] = tmp["_d93"]
     df["_rd93"] = df.groupby("date")["_d93"].transform(cs_rank)
@@ -499,7 +499,7 @@ def add_alpha094(
         diff = g[vwap_col] - ts_min(g[vwap_col], 11)
         return pd.DataFrame({"_diff94": diff, "_exp94": exp_}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_diff94"] = tmp["_diff94"]
     df["_exp94"] = tmp["_exp94"]
     df["_rd94"] = df.groupby("date")["_diff94"].transform(cs_rank)
@@ -534,7 +534,7 @@ def add_alpha095(
         c = correlation(ts_sum(mid, 19), ts_sum(a40, 19), 12)
         return pd.DataFrame({"_diff95": diff, "_c95": c}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_diff95"] = tmp["_diff95"]
     df["_c95"] = tmp["_c95"]
     df["_rd95"] = df.groupby("date")["_diff95"].transform(cs_rank)
@@ -543,7 +543,7 @@ def add_alpha095(
     def _per_stock2(g):
         return ts_rank(g["_rc95"], 11)
 
-    df["_tsr95"] = df.groupby("code", group_keys=False).apply(_per_stock2).reset_index(level=0, drop=True)
+    df["_tsr95"] = df.groupby("code", group_keys=False).apply(_per_stock2, include_groups=False).reset_index(level=0, drop=True)
     df["alpha095"] = (df["_rd95"] < df["_tsr95"]).astype(int)
     return _finish(df, idx, "alpha095", append, ["_diff95", "_c95", "_rd95", "_rc95", "_tsr95"])
 
@@ -577,7 +577,7 @@ def add_alpha096(
         return pd.Series(np.maximum(p1.values, p2.values), index=g.index)
 
     df["alpha096"] = (
-        df.groupby("code", group_keys=False).apply(_per_stock)
+        df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
         .reset_index(level=0, drop=True)
     ) * -1
     return _finish(df, idx, "alpha096", append, ["_rv96", "_rvol96"])
@@ -610,7 +610,7 @@ def add_alpha097(
         p2 = ts_rank(decay_linear(ts_rank(c, 4), 8), 6)
         return pd.DataFrame({"_p197": p1, "_p297": p2}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_p197"] = tmp["_p197"]
     df["_p297"] = tmp["_p297"]
     df["_rp197"] = df.groupby("date")["_p197"].transform(cs_rank)
@@ -647,7 +647,7 @@ def add_alpha098(
         p2 = decay_linear(ts_rank(ts_argmin(c, 8), 6), 4)
         return pd.DataFrame({"_p198": p1, "_p298": p2}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_p198"] = tmp["_p198"]
     df["_p298"] = tmp["_p298"]
     df["_rp198"] = df.groupby("date")["_p198"].transform(cs_rank)
@@ -681,7 +681,7 @@ def add_alpha099(
         c2 = correlation(g[low_col], g[volume_col], 6)
         return pd.DataFrame({"_c199": c1, "_c299": c2}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_c199"] = tmp["_c199"]
     df["_c299"] = tmp["_c299"]
     df["_rc199"] = df.groupby("date")["_c199"].transform(cs_rank)

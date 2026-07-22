@@ -73,7 +73,7 @@ def add_alpha022(
         std20 = ts_stddev(g[close_col], 20)
         return pd.DataFrame({"_dcorr22": d_corr, "_std22": std20}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_dcorr22"] = tmp["_dcorr22"]
     df["_std22"] = tmp["_std22"]
 
@@ -354,7 +354,7 @@ def add_alpha030(
             "_volr30": sv5 / sv20.replace(0, np.nan),
         }, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_ss30"] = tmp["_ss30"]
     df["_volr30"] = tmp["_volr30"]
 
@@ -489,7 +489,7 @@ def add_alpha034(
         dc1 = -1 * delta(g[close_col], 1)
         return pd.DataFrame({"_ratio34": ratio, "_dc34": dc1}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_ratio34"] = tmp["_ratio34"]
     df["_dc34"] = tmp["_dc34"]
 
@@ -576,7 +576,7 @@ def add_alpha036(
             "_c36e": ratio,
         }, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     for col in ["_c36a", "_c36b", "_c36c", "_c36d", "_c36e"]:
         df[col] = tmp[col]
 
@@ -613,7 +613,7 @@ def add_alpha037(
         corr200 = correlation(delay(spread, 1), g[close_col], 200)
         return pd.DataFrame({"_corr37": corr200, "_spread37": spread}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_corr37"] = tmp["_corr37"]
     df["_spread37"] = tmp["_spread37"]
 
@@ -643,7 +643,7 @@ def add_alpha038(
         ratio = g[close_col] / g[open_col].replace(0, np.nan)
         return pd.DataFrame({"_tsr38": tsr, "_ratio38": ratio}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_tsr38"] = tmp["_tsr38"]
     df["_ratio38"] = tmp["_ratio38"]
 
@@ -682,7 +682,7 @@ def add_alpha039(
             "_sr39": sr250,
         }, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_dl39"] = tmp["_dl39"]
     df["_dc39"] = tmp["_dc39"]
     df["_sr39"] = tmp["_sr39"]
@@ -718,7 +718,7 @@ def add_alpha040(
         corr10 = correlation(g[high_col], g[volume_col], 10)
         return pd.DataFrame({"_std40": std10, "_corr40": corr10}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_std40"] = tmp["_std40"]
     df["_corr40"] = tmp["_corr40"]
 

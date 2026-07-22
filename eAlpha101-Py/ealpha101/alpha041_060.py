@@ -138,7 +138,7 @@ def add_alpha045(
             index=g.index,
         )
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_md45"] = tmp["_md45"]
     df["_cv45"] = tmp["_cv45"]
     df["_cs45"] = tmp["_cs45"]
@@ -218,7 +218,7 @@ def add_alpha047(
             "_denom47": denom_inner,
         }, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     for col in ["_inv47", "_vr47", "_hc47", "_denom47"]:
         df[col] = tmp[col]
 
@@ -398,7 +398,7 @@ def add_alpha052(
             index=g.index,
         )
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_p1_52"] = tmp["_p1_52"]
     df["_ret52"] = tmp["_ret52"]
     df["_p3_52"] = tmp["_p3_52"]

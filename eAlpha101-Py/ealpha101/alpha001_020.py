@@ -36,7 +36,7 @@ def add_alpha001(
         sp = signedpower(base, 2)
         return ts_argmax(sp, 5)
 
-    df["_arg1"] = df.groupby("code", group_keys=False).apply(_per_stock)
+    df["_arg1"] = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
 
     df["alpha001"] = (
         df.groupby("date")["_arg1"]
@@ -68,7 +68,7 @@ def add_alpha002(
         # cross-sectional ranks need date-level transform; compute raw for now
         return pd.DataFrame({"_x2": x, "_y2": y}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_x2"] = tmp["_x2"]
     df["_y2"] = tmp["_y2"]
 
@@ -332,7 +332,7 @@ def add_alpha011(
             "_dvol11": delta(g[volume_col], 3),
         }, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_tsmax11"] = tmp["_tsmax11"]
     df["_tsmin11"] = tmp["_tsmin11"]
     df["_dvol11"] = tmp["_dvol11"]
@@ -420,7 +420,7 @@ def add_alpha014(
         corr = correlation(g[open_col], g[volume_col], 10)
         return pd.DataFrame({"_dr14": dr, "_corr14": corr}, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_dr14"] = tmp["_dr14"]
     df["_corr14"] = tmp["_corr14"]
 
@@ -514,7 +514,7 @@ def add_alpha017(
             "_tsr_v17": tsr_v,
         }, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_tsr_c17"] = tmp["_tsr_c17"]
     df["_dd17"] = tmp["_dd17"]
     df["_tsr_v17"] = tmp["_tsr_v17"]
@@ -583,7 +583,7 @@ def add_alpha019(
             "_sumr19": sum_ret,
         }, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_sign19"] = tmp["_sign19"]
     df["_sumr19"] = tmp["_sumr19"]
 
@@ -617,7 +617,7 @@ def add_alpha020(
             "_c20": g[open_col] - delay(g[low_col], 1),
         }, index=g.index)
 
-    tmp = df.groupby("code", group_keys=False).apply(_per_stock)
+    tmp = df.groupby("code", group_keys=False).apply(_per_stock, include_groups=False)
     df["_a20"] = tmp["_a20"]
     df["_b20"] = tmp["_b20"]
     df["_c20"] = tmp["_c20"]
