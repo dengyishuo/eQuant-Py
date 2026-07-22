@@ -3,6 +3,26 @@
 from .data import load_sample_data
 from .catalog import ALPHAS, summary, required_cols, get as get_alpha
 
+from .primitives import (
+    adv,
+    correlation,
+    covariance,
+    cs_rank,
+    decay_linear,
+    delay,
+    delta,
+    scale_alpha,
+    signedpower,
+    ts_argmax,
+    ts_argmin,
+    ts_max,
+    ts_min,
+    ts_product,
+    ts_rank,
+    ts_stddev,
+    ts_sum,
+)
+
 from .alpha001_020 import (
     add_alpha001,
     add_alpha002,
@@ -117,6 +137,12 @@ from .alpha081_101 import (
 
 __all__ = [
     "load_sample_data",
+    # Primitives
+    "adv", "correlation", "covariance", "cs_rank", "decay_linear",
+    "delay", "delta", "scale_alpha", "signedpower",
+    "ts_argmax", "ts_argmin", "ts_max", "ts_min",
+    "ts_product", "ts_rank", "ts_stddev", "ts_sum",
+    # Alphas
     "add_alpha001", "add_alpha002", "add_alpha003", "add_alpha004", "add_alpha005",
     "add_alpha006", "add_alpha007", "add_alpha008", "add_alpha009", "add_alpha010",
     "add_alpha011", "add_alpha012", "add_alpha013", "add_alpha014", "add_alpha015",

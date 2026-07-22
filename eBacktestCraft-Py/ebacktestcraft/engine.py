@@ -533,7 +533,13 @@ def _get_calendar_rebalance_dates(dates: list, cfg: BacktestConfig) -> set:
     periods = date_series.dt.to_period(freq)
     # First trading day in each calendar period
     first_per_period = date_series.groupby(periods).first()
-    rebalance_dates = set(first_per_period.values)
+    # NOTE: `.tolist()`, not `.values` — the latter returns numpy.datetime64
+    # scalars, which compare equal to but do not hash equal to the
+    # pandas.Timestamp objects in `dates`. That silently broke every `date in
+    # rebalance_dates` membership check in the caller's day-loop (except day
+    # 0, which has its own unconditional override), so calendar rebalancing
+    # only ever fired once, on the first day.
+    rebalance_dates = set(first_per_period.tolist())
     return rebalance_dates
 
 

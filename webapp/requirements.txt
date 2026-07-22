@@ -1,0 +1,14 @@
+streamlit>=1.50
+pandas>=2.0
+numpy>=1.23
+matplotlib>=3.9
+seaborn>=0.13
+pyarrow>=21.0
+yfinance>=0.2.30
+tushare>=1.4
+akshare>=1.17
+baostock>=0.9
+requests
+
+# Local editable installs (run from eQuant-Py/ repo root):
+#   pip install -e eTTR-Py -e eClassic-Py -e eFactorCraft-Py -e eBacktestCraft-Py -e eAlpha101-Py

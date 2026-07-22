@@ -2,6 +2,7 @@
 
 from efactorcraft.providers import (
     get_capital,
+    get_daily,
     get_financial_indicators,
     get_index_daily,
     get_info,
@@ -14,6 +15,7 @@ from efactorcraft.providers import (
 __all__ = [
     "set_token",
     "get_token",
+    "get_daily",
     "get_index_daily",
     "get_sw_daily",
     "get_trading_date",

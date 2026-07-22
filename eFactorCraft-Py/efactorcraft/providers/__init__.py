@@ -28,6 +28,8 @@ from typing import Optional, Sequence
 
 import pandas as pd
 
+from efactorcraft.providers._codes import to_tushare
+
 # ── Module-level token ───────────────────────────────────────────────────
 _token: Optional[str] = os.environ.get("TUSHARE_TOKEN")
 
@@ -393,3 +395,52 @@ def get_financial_indicators(
         df = df[df["ts_code"] == ts_code]
 
     return df
+
+
+def get_daily(code: str, start_date: str, end_date: str) -> pd.DataFrame:
+    """Daily OHLCV + adjusted close for a single A-share stock.
+
+    Wraps the Tushare ``daily`` and ``adj_factor`` endpoints. Tushare's
+    ``daily`` returns raw (unadjusted) prices; the forward-adjusted
+    ``adjusted`` column is derived by scaling ``close`` with ``adj_factor``.
+
+    Parameters
+    ----------
+    code : str
+        Bare 6-digit A-share code (e.g. ``"600000"``) or a full
+        Tushare ``ts_code`` (e.g. ``"600000.SH"``).
+    start_date, end_date : str
+        ``YYYYMMDD`` or ``YYYY-MM-DD`` (dashes are stripped internally).
+
+    Returns
+    -------
+    DataFrame
+        Columns: ``date, code, open, high, low, close, adjusted, volume``.
+    """
+    ts_code = code if "." in code else to_tushare(code)
+    start_date = start_date.replace("-", "")
+    end_date = end_date.replace("-", "")
+
+    fields = ["ts_code", "trade_date", "open", "high", "low", "close", "vol"]
+    params = {"ts_code": ts_code, "start_date": start_date, "end_date": end_date}
+    df = _call_api("daily", params, fields)
+
+    if df.empty:
+        return pd.DataFrame(columns=["date", "code", "open", "high", "low", "close", "adjusted", "volume"])
+
+    adj = _call_api(
+        "adj_factor", params, ["ts_code", "trade_date", "adj_factor"]
+    )
+    df = df.merge(adj[["trade_date", "adj_factor"]], on="trade_date", how="left")
+
+    for c in ["open", "high", "low", "close", "vol"]:
+        df[c] = df[c].astype(float)
+    # adj_factor accumulates from listing date (base = 1.0); forward-fill any
+    # gaps so every trading day has a usable factor.
+    df["adj_factor"] = df["adj_factor"].astype(float).ffill().fillna(1.0)
+    df["adjusted"] = df["close"] * df["adj_factor"]
+
+    df = df.rename(columns={"ts_code": "code", "trade_date": "date", "vol": "volume"})
+    df["date"] = pd.to_datetime(df["date"], format="%Y%m%d")
+    df = df[["date", "code", "open", "high", "low", "close", "adjusted", "volume"]]
+    return df.sort_values("date").reset_index(drop=True)

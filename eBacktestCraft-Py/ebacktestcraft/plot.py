@@ -379,3 +379,8 @@ def plot_all(
         save_path=f"{save_dir}/monthly_returns.png" if save_dir else None,
     )
     return figs
+
+
+# Public alias — ebacktestcraft/__init__.py and external callers (run_viz.py)
+# use this name; plot_df is the internal name used within this module.
+plot_equity_curve = plot_df

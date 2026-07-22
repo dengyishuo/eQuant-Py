@@ -1,321 +1,187 @@
-# eAlpha101
+# eAlpha101 — WorldQuant 101 Alpha 因子
 
-A Python package implementing all 101 quantitative Alpha factors from the WorldQuant paper *"101 Formulaic Alphas"* (Kakushadze, 2016). Designed for **long-format panel DataFrames** — the same API style as the companion R package `eAlpha101`.
+基于 Kakushadze (2016) 论文 *101 Formulaic Alphas* 的完整 Python 实现，提供 101 个量化 Alpha 因子和 17 个底层算子原语，支持长格式面板 DataFrame。
 
----
+## 在 eQuant-Py 中的角色
 
-## Installation
+作为**因子层**的最高级组成部分，eAlpha101 实现了业界经典的 101 个公式化 Alpha 因子：
+
+- 这些因子由 WorldQuant 提出，是量化多因子模型的标杆
+- 与 [eTTR](../eTTR-Py/)/[eClassic](../eClassic-Py/) 互补：eTTR 是技术指标，eClassic 是学术风险因子，eAlpha101 是量化公式化因子
+- 输出可直接输入 [eFactorCraft](../eFactorCraft-Py/) 进行预处理/合成/筛选
+- 输出可直接输入 [eBacktestCraft](../eBacktestCraft-Py/) 作为策略信号
+
+## 架构层级
+
+```
+eAlpha101 (因子层 — 高级 Alpha)
+  ├── primitives       → 底层算子原语 (17 个：ts_sum, ts_rank, correlation, decay_linear, ...)
+  ├── catalog          → 因子目录 (ALPHAS, summary, required_cols, get_alpha)
+  ├── data             → 示例数据加载 (load_sample_data)
+  ├── formulas / gen_formulas  → 公式推导 / 生成
+  ├── alpha001_020.py  → Alpha 1-20
+  ├── alpha021_040.py  → Alpha 21-40
+  ├── alpha041_060.py  → Alpha 41-60
+  ├── alpha061_080.py  → Alpha 61-80
+  └── alpha081_101.py  → Alpha 81-101
+```
+
+## 依赖关系
+
+- 仅依赖 pandas 和 numpy
+- 无其他 eQuant 子包依赖
+- 被 eFactorCraft, eBacktestCraft 消费
+
+## 安装
 
 ```bash
-# from source
-pip install -e .
-
-# dependencies
-pip install pandas>=1.5 numpy>=1.23
+pip install -e eAlpha101-Py
 ```
 
----
-
-## Quick Start
+## 快速开始
 
 ```python
-import ealpha101 as ea
-
-# built-in sample data (10 A-share stocks × 500 trading days)
-df = ea.load_sample_data()
-print(df.shape)          # (5000, 28)
-
-# compute a single alpha
-result = ea.add_alpha001(df)
-print(result[["date", "code", "alpha001"]].head(10))
-
-# chain multiple alphas
-df = ea.add_alpha001(df)
-df = ea.add_alpha006(df)
-df = ea.add_alpha101(df)
-print(df[["date", "code", "alpha001", "alpha006", "alpha101"]].tail())
-```
-
----
-
-## Data Format
-
-All functions accept and return a **long-format** `pd.DataFrame`.
-
-### Required identity columns
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `date` | datetime-like | Trading date |
-| `code` | str | Stock ticker / ID |
-| `name` | str | Stock name |
-
-### Standard price / volume columns
-
-| Column | Default param | Description |
-|--------|---------------|-------------|
-| `open` | `open_col="open"` | Opening price |
-| `high` | `high_col="high"` | Daily high |
-| `low` | `low_col="low"` | Daily low |
-| `close` | `close_col="close"` | Closing price |
-| `volume` | `volume_col="volume"` | Trading volume |
-| `vwap` | `vwap_col="vwap"` | Volume-weighted average price |
-| `returns` | `returns_col="returns"` | Daily simple return |
-
-### Special columns (only some alphas)
-
-| Column | Which alphas | Description |
-|--------|-------------|-------------|
-| `cap` | alpha056 | Market capitalisation |
-| `neut_*` | alpha048, 058, 059, 063, 067, 069, 070, 076, 079, 080, 082, 089, 091, 093, 097, 100 | Pre-industry-neutralised columns (see below) |
-
----
-
-## Built-in Sample Data
-
-```python
-df = ea.load_sample_data(seed=2024)
-```
-
-Returns a 5 000-row DataFrame (10 stocks × 500 trading days) with **all 28 columns** needed to run every alpha function without extra preparation.
-
-### Column reference
-
-```
-date, code, name,
-open, high, low, close, adjusted, volume, vwap, returns,
-cap, bv, op, assets, benchmark_ret,
-
-# pre-neutralised (industry-demeaned) columns:
-neut_close, neut_vwap, neut_low, neut_volume,
-neut_price79, neut_price80, neut_price97, neut_vwap2,
-neut_close_ret, neut_vwap_ret,
-neut_rank100, neut_diff100
-```
-
----
-
-## Industry Neutralisation
-
-Alphas that involve `IndNeutralize()` in the original paper **do not compute it internally**. Instead, they accept a pre-neutralised column name as a parameter. This keeps the functions pure and lets you choose your own industry classification.
-
-```python
-# Example: industry-demean vwap by date × industry
-df["neut_vwap"] = (
-    df["vwap"]
-    - df.groupby(["date", "industry"])["vwap"].transform("mean")
+from ealpha101 import (
+    add_alpha001, add_alpha012, add_alpha046,
+    summary, required_cols, get_alpha,
+    load_sample_data,
 )
 
-result = ea.add_alpha058(df, neut_vwap_col="neut_vwap")
+# 1. 查看所有 Alpha 的元信息
+print(summary())
+#        name                description                          required_cols
+# 0  alpha001  (rank(Ts_ArgMax(...)) - 0.5)  [open, close, returns, vwap, volume]
+# ...
+
+# 2. 查询特定 Alpha 需要的列
+required_cols("alpha001")   # ['open', 'close', 'returns', 'vwap', 'volume']
+
+# 3. 长格式面板 DataFrame 计算因子
+df = add_alpha001(df)        # Alpha 001
+df = add_alpha012(df)        # Alpha 012
+df = add_alpha046(df)        # Alpha 046 (支持中性化变体)
+
+# 4. 按名称获取 Alpha 函数
+alpha_func = get_alpha("alpha032")
+df = alpha_func(df)
+
+# 5. 加载示例数据
+sample = load_sample_data()  # 10 只 A 股 x 500 交易日的 OHLCV 数据
+
+# 6. 直接使用底层原语
+from ealpha101 import ts_sum, ts_rank, decay_linear, correlation, delta
+result = ts_rank(df["close"], 10)
 ```
 
-Alphas requiring pre-neutralised columns and their parameters:
+## API 参考
 
-| Alpha | Pre-neutralised param(s) |
-|-------|--------------------------|
-| alpha048 | `neut_close_ret_col`, `neut_vwap_ret_col` |
-| alpha058 | `neut_vwap_col` |
-| alpha059 | `neut_vwap2_col` |
-| alpha063 | `neut_close_col` |
-| alpha067 | `neut_vwap_col`, `neut_adv20_col` |
-| alpha069 | `neut_vwap_col` |
-| alpha070 | `neut_close_col` |
-| alpha076 | `neut_low_col` |
-| alpha079 | `neut_price_col` |
-| alpha080 | `neut_price_col` |
-| alpha082 | `neut_vol_col` |
-| alpha089 | `neut_vwap_col` |
-| alpha091 | `neut_close_col` |
-| alpha093 | `neut_vwap_col` |
-| alpha097 | `neut_price_col` |
-| alpha100 | `neut_rank_col`, `neut_diff_col` |
+### 因子目录
 
----
+| 函数 | 说明 |
+|------|------|
+| `load_sample_data()` | 加载 10 只 A 股 x 500 交易日的示例 OHLCV 数据 |
+| `summary()` | 返回所有 Alpha 的元信息 DataFrame（序号、名称、描述、所需列） |
+| `required_cols(alpha_name)` | 查询特定 Alpha 需要的输入列 |
+| `get_alpha(alpha_name)` | 按名称（如 `"alpha032"`）获取 Alpha 函数 |
 
-## Module Structure
+### Alpha 因子（101 个）
 
-```
-ealpha101/
-├── __init__.py       # exports all 101 add_alphaXXX + load_sample_data
-├── data.py           # load_sample_data()
-├── _base.py          # _validate / _sort / _finish helpers
-├── utils.py          # rolling utility functions
-├── alpha001_020.py   # alpha001 – alpha020
-├── alpha021_040.py   # alpha021 – alpha040
-├── alpha041_060.py   # alpha041 – alpha060
-├── alpha061_080.py   # alpha061 – alpha080
-└── alpha081_101.py   # alpha081 – alpha101
-```
+每个 `add_alphaNNN(df, **params) -> pd.DataFrame` 输入长格式面板 DataFrame，返回附加 `alpha_NNN` 列的 DataFrame。具体参数取决于各因子，由 catalog 中的元数据定义。
 
----
+#### 因子分组
 
-## Function API
+| Alpha 范围 | 数量 | 特点 |
+|------------|------|------|
+| Alpha 001-020 | 20 | 基础 Alpha，大多数需要 OHLCV + returns + vwap |
+| Alpha 021-040 | 20 | 中等复杂度，部分需要行业/市值列 |
+| Alpha 041-060 | 20 | 较为复杂，包含中性化和组内排名 |
+| Alpha 061-080 | 20 | 高复杂度，多因子组合信号 |
+| Alpha 081-101 | 21 | 最复杂，跨资产/多时间尺度 |
 
-Every `add_alphaXXX` function follows the same contract:
+### 底层算子原语 (17 个)
+
+这些底层算子构成了 Alpha 因子的计算基础，也可在自定义因子中单独使用：
+
+| 原语 | 说明 | 示例 |
+|------|------|------|
+| `adv(d)` | 加权日均交易量 (Average Daily Volume) | `adv(20)` |
+| `correlation(x, y, d)` | 时序滚动相关系数 | `correlation(close, returns, 20)` |
+| `covariance(x, y, d)` | 时序滚动协方差 | `covariance(close, returns, 20)` |
+| `cs_rank(x)` | 截面排名 (Cross-Sectional Rank) | `cs_rank(factor)` |
+| `decay_linear(x, d)` | 线性衰减加权 | `decay_linear(close, 10)` |
+| `delay(x, d)` | 延迟算子 | `delay(close, 1)` |
+| `delta(x, d)` | 差分 | `delta(close, 5)` |
+| `scale_alpha(x)` | Alpha 缩放（去均值 / 除绝对值和） | `scale_alpha(factor)` |
+| `signedpower(x, a)` | 符号保持幂次 | `signedpower(returns, 0.5)` |
+| `ts_argmax(x, d)` | 时序滚动 argmax | `ts_argmax(close, 20)` |
+| `ts_argmin(x, d)` | 时序滚动 argmin | `ts_argmin(close, 20)` |
+| `ts_max(x, d)` | 时序滚动最大值 | `ts_max(high, 20)` |
+| `ts_min(x, d)` | 时序滚动最小值 | `ts_min(low, 20)` |
+| `ts_product(x, d)` | 时序滚动乘积 | `ts_product(returns, 20)` |
+| `ts_rank(x, d)` | 时序滚动排名 | `ts_rank(close, 252)` |
+| `ts_stddev(x, d)` | 时序滚动标准差 | `ts_stddev(returns, 20)` |
+| `ts_sum(x, d)` | 时序滚动求和 | `ts_sum(volume, 20)` |
+
+## 使用案例
+
+### 案例 1：批量计算 + 因子筛选
 
 ```python
-def add_alphaXXX(
-    mkt_data: pd.DataFrame,
-    close_col: str = "close",   # column-name params with sensible defaults
-    ...
-    append: bool = True,        # True → append alpha column; False → slim output
-) -> pd.DataFrame:
+from ealpha101 import summary, get_alpha, required_cols
+from efactorcraft import ic_analysis, correlation_screen
+
+# 筛选出只需要 OHLCV 的 Alpha
+catalog = summary()
+simple_alphas = [row["name"] for _, row in catalog.iterrows()
+                 if all(c in df.columns for c in required_cols(row["name"]))]
+
+# 批量计算
+for name in simple_alphas[:20]:
+    func = get_alpha(name)
+    df = func(df)
+
+# IC 筛选
+alpha_cols = [f"alpha_{i:03d}" for i in range(1, 21)]
+ic = ic_analysis(df, factor_cols=alpha_cols, forward_col="return_5d")
+screened = correlation_screen(df, factor_cols=alpha_cols, threshold=0.7)
 ```
 
-**Returns** the same number of rows as the input. Row order is preserved (sorted internally by `[code, date]` then restored to original index).
+### 案例 2：Alpha 因子组合
 
 ```python
-# append=True (default): all original columns + alpha column
-result = ea.add_alpha001(df)
+from ealpha101 import add_alpha001, add_alpha012, add_alpha046
+from efactorcraft import equal_weighted_composite, icir_weighted_composite
 
-# append=False: only date, code, name, alphaXXX
-slim = ea.add_alpha001(df, append=False)
+# 计算选择的 Alpha
+df = add_alpha001(df)
+df = add_alpha012(df)
+df = add_alpha046(df)
+
+# 合成
+alpha_cols = ["alpha_001", "alpha_012", "alpha_046"]
+df["composite_eq"] = equal_weighted_composite(df, alpha_cols)
+df["composite_icir"] = icir_weighted_composite(df, alpha_cols, forward_col="return_5d")
 ```
 
----
+## 数据规范
 
-## Utility Functions (`ealpha101.utils`)
+- 输入：长格式面板 DataFrame
+- 需要的基础列：`open`, `high`, `low`, `close`, `volume`, `returns`, `vwap`
+- 部分 Alpha 需要额外列：`cap`（市值）、`industry`（行业）等
+- 需要中性化的 Alpha 接受以 `_neut` 结尾的预计算列
+- 输出：附加 `alpha_NNN` 列的 DataFrame
 
-```python
-from ealpha101.utils import (
-    cs_rank,        # cross-sectional percentile rank
-    scale_alpha,    # scale to unit absolute sum
-    ts_sum,         # rolling sum
-    ts_mean,        # rolling mean
-    ts_stddev,      # rolling std dev
-    ts_max,         # rolling maximum
-    ts_min,         # rolling minimum
-    ts_rank,        # rolling rank (percentile)
-    ts_argmax,      # rolling argmax position (1-indexed)
-    ts_argmin,      # rolling argmin position (1-indexed)
-    ts_product,     # rolling product
-    delay,          # lag / shift
-    delta,          # difference from lag
-    correlation,    # rolling Pearson correlation
-    covariance,     # rolling covariance
-    decay_linear,   # linearly weighted moving average
-    signedpower,    # sign(x) * abs(x)^exp
-    adv,            # d-day average daily volume
-)
-```
+## 参考文献
 
----
+Kakushadze, Z. (2016). *101 Formulaic Alphas*. Wilmott, 2016(84), 72-81.
 
-## Examples
+## 与各子包的关系
 
-### Example 1: Basic usage with built-in data
+- **eFactorCraft**：主要下游 — 接收 eAlpha101 因子进行预处理/合成/筛选/择时
+- **eBacktestCraft**：因子输入 — Alpha 因子可作为 `signal()` 的输入
+- **eTTR / eClassic**：互补 — 三类因子（技术/学术/量化）覆盖完整的因子谱系
+- **webapp**：因子选择面板中可勾选 Alpha 因子
 
-```python
-import ealpha101 as ea
+## 版本
 
-df = ea.load_sample_data()
-
-# alpha101: (close - open) / (high - low + 0.001) — intraday momentum
-result = ea.add_alpha101(df)
-print(result[["date", "code", "alpha101"]].head())
-```
-
-### Example 2: Multiple alphas in a pipeline
-
-```python
-df = ea.load_sample_data()
-
-for add_fn in [ea.add_alpha001, ea.add_alpha006, ea.add_alpha011,
-               ea.add_alpha025, ea.add_alpha101]:
-    df = add_fn(df)
-
-alpha_cols = [c for c in df.columns if c.startswith("alpha")]
-print(df[["date", "code"] + alpha_cols].tail())
-```
-
-### Example 3: Slim output for factor storage
-
-```python
-df = ea.load_sample_data()
-factor = ea.add_alpha001(df, append=False)
-# factor has only: date, code, name, alpha001
-print(factor.shape)   # (5000, 4)
-```
-
-### Example 4: Alphas requiring pre-neutralised columns
-
-```python
-df = ea.load_sample_data()
-# neut_vwap is already pre-computed in the sample data
-result = ea.add_alpha058(df, neut_vwap_col="neut_vwap", volume_col="volume")
-print(result[["date", "code", "alpha058"]].dropna().head())
-```
-
-### Example 5: Custom column names
-
-```python
-# your DataFrame uses different column names
-result = ea.add_alpha001(
-    my_df,
-    close_col="price_close",
-    returns_col="daily_return",
-)
-```
-
-### Example 6: Cross-sectional IC analysis
-
-```python
-df = ea.load_sample_data()
-df = ea.add_alpha001(df, append=True)
-
-# forward 1-day return
-df["fwd_ret"] = df.groupby("code")["returns"].shift(-1)
-
-# daily rank IC (Spearman)
-ic = (
-    df.dropna(subset=["alpha001", "fwd_ret"])
-    .groupby("date")
-    .apply(lambda g: g["alpha001"].corr(g["fwd_ret"], method="spearman"))
-)
-print(f"Mean IC: {ic.mean():.4f}  |  ICIR: {ic.mean()/ic.std():.4f}")
-```
-
-### Example 7: alpha056 (requires cap column)
-
-```python
-df = ea.load_sample_data()
-# cap column is included in sample data
-result = ea.add_alpha056(df, returns_col="returns", cap_col="cap")
-print(result[["date", "code", "alpha056"]].head())
-```
-
----
-
-## Alpha Reference
-
-| Module | Alphas | Key inputs |
-|--------|--------|-----------|
-| alpha001_020.py | 001–020 | close, open, high, low, volume, vwap, returns |
-| alpha021_040.py | 021–040 | close, open, high, low, volume, vwap, returns |
-| alpha041_060.py | 041–060 | close, open, high, low, volume, vwap, returns, cap (056 only) |
-| alpha061_080.py | 061–080 | close, open, high, low, volume, vwap + neut_* columns |
-| alpha081_101.py | 081–101 | close, open, high, low, volume, vwap + neut_* columns |
-
----
-
-## Reference
-
-Kakushadze, Z. (2016). *101 Formulaic Alphas*. Wilmott Magazine, 2016(84), 72–81.  
-[https://arxiv.org/abs/1601.00991](https://arxiv.org/abs/1601.00991)
-
----
-
-## See Also
-
-- **eAlpha101** (R package) — same 101 alphas with identical long-format API
-- **eClassic** (R package) — Fama-French 6-factor model functions (Size, Value, Profitability, Investment, Beta, Momentum)
-
----
-
-## 联系我们
-
-| | |
-|---|---|
-| 🌐 公司官网 | [xquant.shop](https://xquant.shop) |
-| 📱 公司公众号 | xquant-shop |
-| 📱 个人公众号 | i锐角 |
+0.1.0 — Python >= 3.9
