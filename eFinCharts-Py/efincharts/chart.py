@@ -271,8 +271,18 @@ class Chart:
             result.append(mpf.make_addplot(**ap))
         return result
 
-    def show(self, **kwargs):
-        """Render the chart using matplotlib."""
+    def show(self, show_data: bool = False, **kwargs):
+        """Render the chart using matplotlib.
+
+        Parameters
+        ----------
+        show_data : bool
+            If True, print the underlying OHLC data table alongside the chart.
+            Default False (chart only).
+        **kwargs
+            Additional keyword arguments forwarded to ``mpf.plot()``
+            (e.g. ``figratio``, ``figscale``, ``savefig``).
+        """
         import mplfinance as mpf
         from .theme import get_style
 
@@ -313,12 +323,46 @@ class Chart:
         plot_kwargs.update(kwargs)
         plot_kwargs.update(self._kwargs)
 
+        # Optionally print data table
+        if show_data:
+            print("--- Chart Data ---")
+            print(self._data.head())
+            print(f"... {len(self._data)} rows total\n")
+
         return mpf.plot(self._data, **plot_kwargs)
 
-    def save(self, filename: str, **kwargs):
-        """Save chart to file (PNG, PDF, SVG)."""
+    def save(self, filename: str, show_data: bool = False, **kwargs):
+        """Save chart to file (PNG, PDF, SVG).
+
+        Parameters
+        ----------
+        filename : str
+            Output file path (e.g. "chart.png").
+        show_data : bool
+            If True, also print the underlying data table. Default False.
+        **kwargs
+            Additional keyword arguments forwarded to ``mpf.plot()``.
+        """
         kwargs["savefig"] = filename
-        return self.show(**kwargs)
+        return self.show(show_data=show_data, **kwargs)
+
+    def get_data(self) -> pd.DataFrame:
+        """Return the underlying OHLC data as a DataFrame.
+
+        Returns a copy of the internal data, safe for further manipulation.
+
+        Returns
+        -------
+        pd.DataFrame
+            OHLC(+V) data with DatetimeIndex.
+
+        Examples
+        --------
+        >>> chart = candlestick(df, volume=True)
+        >>> data = chart.get_data()
+        >>> print(data.head())
+        """
+        return self._data.copy()
 
     def __repr__(self) -> str:
         return (
